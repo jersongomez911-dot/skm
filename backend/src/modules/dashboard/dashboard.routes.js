@@ -1,0 +1,11 @@
+const express = require('express');
+const router = express.Router();
+const ctrl = require('./dashboard.controller');
+const { authenticate } = require('../../middleware/auth.middleware');
+router.use(authenticate);
+router.get('/kpis', ctrl.getKpis);
+router.get('/charts', ctrl.getCharts);
+router.get('/alerts', ctrl.getAlerts);
+router.get('/recent-services', ctrl.getRecentServices);
+router.get('/top-technicians', ctrl.getTopTechnicians);
+module.exports = router;

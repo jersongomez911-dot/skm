@@ -1,0 +1,390 @@
+// This is your Prisma schema file for MySQL
+// SKM Servicio Técnico - Taller Motocross
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  MECHANIC
+  RECEPTIONIST
+  VIEWER
+}
+
+enum ServiceStatus {
+  PENDING
+  DIAGNOSIS
+  IN_PROGRESS
+  WAITING_PARTS
+  PAUSED
+  DONE
+  DELIVERED
+  CANCELLED
+}
+
+enum ServicePriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum StockMovementType {
+  ENTRY
+  EXIT
+  ADJUSTMENT
+  SERVICE_USE
+}
+
+// ─── Users ───────────────────────────────────────────────────────────────────
+
+model User {
+  id                   String    @id @default(cuid())
+  name                 String    @db.VarChar(255)
+  email                String    @unique @db.VarChar(255)
+  passwordHash         String    @db.VarChar(255)
+  role                 Role      @default(VIEWER)
+  isActive             Boolean   @default(true)
+  twoFactorSecret      String?   @db.VarChar(255)
+  twoFactorEnabled     Boolean   @default(false)
+  failedAttempts       Int       @default(0)
+  lockedUntil          DateTime?
+  lastLogin            DateTime?
+  passwordResetToken   String?   @db.VarChar(255)
+  passwordResetExpiry  DateTime?
+  avatar               String?   @db.VarChar(500)
+  phone                String?   @db.VarChar(20)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Relations
+  techServices         Service[]       @relation("TechnicianServices")
+  receptionServices    Service[]       @relation("ReceptionistServices")
+  checklists           Checklist[]
+  auditLogs            AuditLog[]
+  notifications        Notification[]
+  stockMovements       StockMovement[]
+
+  @@map("users")
+}
+
+// ─── Clients ─────────────────────────────────────────────────────────────────
+
+model Client {
+  id               String      @id @default(cuid())
+  fullName         String      @db.VarChar(255)
+  documentNumber   String      @unique @db.VarChar(50)
+  phone            String      @db.VarChar(20)
+  email            String      @unique @db.VarChar(255)
+  address          String?     @db.VarChar(500)
+  city             String?     @db.VarChar(100)
+  birthDate        DateTime?
+  category         String?     @db.VarChar(100)
+  team             String?     @db.VarChar(100)
+  emergencyContact String?     @db.VarChar(255)
+  observations     String?     @db.Text
+  isActive         Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  motorcycles      Motorcycle[]
+  photos           Photo[]
+
+  @@map("clients")
+}
+
+// ─── Motorcycles ─────────────────────────────────────────────────────────────
+
+model Motorcycle {
+  id           String      @id @default(cuid())
+  clientId     String
+  brand        String      @db.VarChar(100)
+  model        String      @db.VarChar(100)
+  displacement Int
+  year         Int
+  vin          String      @unique @db.VarChar(50)
+  engineNumber String?     @db.VarChar(50)
+  hoursUsed    Float?      @default(0)
+  mileage      Int?        @default(0)
+  color        String?     @db.VarChar(50)
+  status       String      @default("ACTIVE") @db.VarChar(50)
+  notes        String?     @db.Text
+  qrCode       String?     @db.Text
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  client       Client      @relation(fields: [clientId], references: [id])
+  services     Service[]
+  photos       Photo[]
+
+  @@map("motorcycles")
+}
+
+// ─── Services ────────────────────────────────────────────────────────────────
+
+model Service {
+  id               String          @id @default(cuid())
+  motorcycleId     String
+  technicianId     String?
+  receptionistId   String
+  status           ServiceStatus   @default(PENDING)
+  priority         ServicePriority @default(NORMAL)
+  slaHours         Int?
+  estimatedHours   Float?
+  estimatedCost    Float?
+  laborCost        Float?          @default(0)
+  partsCost        Float?          @default(0)
+  totalCost        Float?          @default(0)
+  observations     String?         @db.Text
+  techNotes        String?         @db.Text
+  diagnosis        String?         @db.Text
+  accessories      String?         @db.Text
+  damageReport     String?         @db.Text
+  deliveredAt      DateTime?
+  signatureUrl     String?         @db.VarChar(500)
+  qrCode           String?         @db.Text
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  motorcycle       Motorcycle      @relation(fields: [motorcycleId], references: [id])
+  technician       User?           @relation("TechnicianServices", fields: [technicianId], references: [id])
+  receptionist     User            @relation("ReceptionistServices", fields: [receptionistId], references: [id])
+  items            ServiceItem[]
+  checklists       Checklist[]
+  photos           Photo[]
+  statusHistory    ServiceStatusHistory[]
+
+  @@map("services")
+}
+
+model ServiceItem {
+  id              String        @id @default(cuid())
+  serviceId       String
+  inventoryItemId String?
+  description     String        @db.VarChar(255)
+  quantity        Float         @default(1)
+  unitCost        Float         @default(0)
+  totalCost       Float         @default(0)
+  createdAt       DateTime      @default(now())
+
+  service         Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+
+  @@map("service_items")
+}
+
+model ServiceStatusHistory {
+  id          String        @id @default(cuid())
+  serviceId   String
+  fromStatus  String?       @db.VarChar(50)
+  toStatus    String        @db.VarChar(50)
+  notes       String?       @db.Text
+  changedById String?       @db.VarChar(50)
+  createdAt   DateTime      @default(now())
+
+  service     Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@map("service_status_history")
+}
+
+// ─── Checklists ───────────────────────────────────────────────────────────────
+
+model ChecklistTemplate {
+  id             String              @id @default(cuid())
+  name           String              @db.VarChar(255)
+  motorcycleType String?             @db.VarChar(100)
+  description    String?             @db.Text
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  templateItems  ChecklistTemplateItem[]
+  checklists     Checklist[]
+
+  @@map("checklist_templates")
+}
+
+model ChecklistTemplateItem {
+  id           String            @id @default(cuid())
+  templateId   String
+  category     String            @db.VarChar(100)
+  label        String            @db.VarChar(255)
+  isRequired   Boolean           @default(false)
+  order        Int               @default(0)
+
+  template     ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_template_items")
+}
+
+model Checklist {
+  id           String      @id @default(cuid())
+  serviceId    String
+  templateId   String?
+  technicianId String?
+  completedAt  DateTime?
+  notes        String?     @db.Text
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  service      Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  template     ChecklistTemplate? @relation(fields: [templateId], references: [id])
+  technician   User?       @relation(fields: [technicianId], references: [id])
+  items        ChecklistItem[]
+
+  @@map("checklists")
+}
+
+model ChecklistItem {
+  id           String    @id @default(cuid())
+  checklistId  String
+  category     String    @db.VarChar(100)
+  label        String    @db.VarChar(255)
+  status       String    @default("PENDING") @db.VarChar(20)
+  notes        String?   @db.Text
+  photoUrl     String?   @db.VarChar(500)
+  isRequired   Boolean   @default(false)
+  order        Int       @default(0)
+  createdAt    DateTime  @default(now())
+
+  checklist    Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_items")
+}
+
+// ─── Inventory ────────────────────────────────────────────────────────────────
+
+model InventoryItem {
+  id            String          @id @default(cuid())
+  sku           String          @unique @db.VarChar(100)
+  name          String          @db.VarChar(255)
+  description   String?         @db.Text
+  category      String?         @db.VarChar(100)
+  brand         String?         @db.VarChar(100)
+  quantity      Float           @default(0)
+  minStock      Float           @default(0)
+  unitCost      Float           @default(0)
+  salePrice     Float           @default(0)
+  supplierId    String?
+  location      String?         @db.VarChar(100)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  supplier      Supplier?       @relation(fields: [supplierId], references: [id])
+  movements     StockMovement[]
+  serviceItems  ServiceItem[]
+
+  @@map("inventory_items")
+}
+
+model StockMovement {
+  id              String            @id @default(cuid())
+  inventoryItemId String
+  type            StockMovementType
+  quantity        Float
+  previousStock   Float
+  newStock        Float
+  reference       String?           @db.VarChar(255)
+  notes           String?           @db.Text
+  userId          String?
+  unitCost        Float?
+  createdAt       DateTime          @default(now())
+
+  inventoryItem   InventoryItem     @relation(fields: [inventoryItemId], references: [id])
+  user            User?             @relation(fields: [userId], references: [id])
+
+  @@map("stock_movements")
+}
+
+// ─── Suppliers ────────────────────────────────────────────────────────────────
+
+model Supplier {
+  id          String          @id @default(cuid())
+  name        String          @db.VarChar(255)
+  contact     String?         @db.VarChar(255)
+  email       String?         @db.VarChar(255)
+  phone       String?         @db.VarChar(20)
+  address     String?         @db.VarChar(500)
+  taxId       String?         @db.VarChar(50)
+  notes       String?         @db.Text
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  items       InventoryItem[]
+
+  @@map("suppliers")
+}
+
+// ─── Photos ───────────────────────────────────────────────────────────────────
+
+model Photo {
+  id           String    @id @default(cuid())
+  entityType   String    @db.VarChar(50)
+  entityId     String    @db.VarChar(50)
+  url          String    @db.VarChar(500)
+  filename     String    @db.VarChar(255)
+  caption      String?   @db.VarChar(255)
+  size         Int?
+  mimeType     String?   @db.VarChar(50)
+  uploadedBy   String?   @db.VarChar(50)
+  createdAt    DateTime  @default(now())
+
+  client       Client?   @relation(fields: [entityId], references: [id], map: "photo_client_fk")
+  motorcycle   Motorcycle? @relation(fields: [entityId], references: [id], map: "photo_motorcycle_fk")
+  service      Service?  @relation(fields: [entityId], references: [id], map: "photo_service_fk")
+
+  @@map("photos")
+}
+
+// ─── Audit ────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  userId     String?
+  userEmail  String?   @db.VarChar(255)
+  action     String    @db.VarChar(100)
+  entity     String    @db.VarChar(100)
+  entityId   String?   @db.VarChar(100)
+  before     Json?
+  after      Json?
+  ip         String?   @db.VarChar(50)
+  userAgent  String?   @db.VarChar(500)
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+
+  user       User?     @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String    @db.VarChar(50)
+  title     String    @db.VarChar(255)
+  message   String    @db.Text
+  isRead    Boolean   @default(false)
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}

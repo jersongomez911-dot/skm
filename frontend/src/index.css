@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  
+  html { color-scheme: dark; }
+  
+  body {
+    @apply bg-dark-900 text-gray-100 font-sans antialiased;
+    scrollbar-width: thin;
+    scrollbar-color: #374151 #111827;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-dark-800; }
+  ::-webkit-scrollbar-thumb { @apply bg-dark-600 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-dark-500; }
+
+  ::selection { @apply bg-brand-500/30 text-white; }
+}
+
+@layer components {
+  /* Cards */
+  .card {
+    @apply bg-dark-800 border border-dark-700/60 rounded-xl shadow-xl;
+  }
+  .card-glass {
+    @apply bg-dark-800/60 backdrop-blur-md border border-white/5 rounded-xl shadow-2xl;
+  }
+  
+  /* Inputs */
+  .input {
+    @apply w-full bg-dark-700 border border-dark-600 text-gray-100 rounded-lg px-3 py-2.5 text-sm
+           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
+           placeholder-dark-400 transition-all duration-200;
+  }
+  .input-error {
+    @apply border-red-500 focus:ring-red-500;
+  }
+  .label {
+    @apply block text-sm font-medium text-gray-300 mb-1.5;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold 
+           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-800
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand-500 hover:bg-brand-600 text-white focus:ring-brand-500
+           shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 active:scale-[0.98];
+  }
+  .btn-secondary {
+    @apply btn bg-dark-700 hover:bg-dark-600 text-gray-100 border border-dark-600 focus:ring-dark-500;
+  }
+  .btn-danger {
+    @apply btn bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-600/30 focus:ring-red-500;
+  }
+  .btn-ghost {
+    @apply btn hover:bg-dark-700 text-gray-400 hover:text-gray-100 focus:ring-dark-500;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-icon {
+    @apply btn p-2 rounded-lg;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-orange { @apply badge bg-brand-500/20 text-brand-400 border border-brand-500/30; }
+  .badge-green  { @apply badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30; }
+  .badge-red    { @apply badge bg-red-500/20 text-red-400 border border-red-500/30; }
+  .badge-blue   { @apply badge bg-blue-500/20 text-blue-400 border border-blue-500/30; }
+  .badge-yellow { @apply badge bg-yellow-500/20 text-yellow-400 border border-yellow-500/30; }
+  .badge-gray   { @apply badge bg-dark-600 text-gray-400 border border-dark-500; }
+  .badge-purple { @apply badge bg-purple-500/20 text-purple-400 border border-purple-500/30; }
+
+  /* Table */
+  .table-wrapper {
+    @apply overflow-x-auto rounded-xl border border-dark-700/60;
+  }
+  .table { @apply w-full text-sm; }
+  .table th {
+    @apply bg-dark-700/80 text-gray-300 font-semibold px-4 py-3 text-left whitespace-nowrap;
+  }
+  .table td {
+    @apply px-4 py-3 border-t border-dark-700/40 text-gray-300;
+  }
+  .table tr:hover td { @apply bg-dark-700/30 transition-colors; }
+
+  /* Sidebar */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400
+           hover:text-gray-100 hover:bg-dark-700/60 transition-all duration-200 cursor-pointer;
+  }
+  .sidebar-item-active {
+    @apply text-brand-400 bg-brand-500/10 border-r-2 border-brand-500;
+  }
+
+  /* Stats card */
+  .stat-card {
+    @apply card p-5 flex flex-col gap-3 hover:border-brand-500/30 transition-colors duration-300;
+  }
+
+  /* Page header */
+  .page-header {
+    @apply flex items-center justify-between mb-6;
+  }
+  .page-title {
+    @apply text-2xl font-bold text-white;
+  }
+  .page-subtitle {
+    @apply text-sm text-gray-400 mt-0.5;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent;
+  }
+  .glow-orange {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+  }
+  .animate-count {
+    animation: countUp 0.5s ease-out;
+  }
+  @keyframes countUp {
+    from { opacity: 0; transform: translateY(5px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
