@@ -1,6 +1,10 @@
 const { prisma } = require('../../config/database');
+const { cache } = require('../../config/redis');
 
 const getKpis = async () => {
+  const cached = await cache.get('dash:kpis');
+  if (cached) return cached;
+
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -22,16 +26,22 @@ const getKpis = async () => {
     prisma.$queryRaw`SELECT COUNT(*) as count FROM inventory_items WHERE quantity <= minStock AND isActive = 1`,
   ]);
 
-  return {
+  const result = {
     pending, inProgress, waitingParts, done, overdue,
     todayRevenue: todayRevenue._sum.totalCost || 0,
     monthRevenue: monthRevenue._sum.totalCost || 0,
     totalClients, totalMotorcycles,
     lowStockCount: Number(lowStockCount[0]?.count || 0),
   };
+
+  await cache.set('dash:kpis', result, 300);
+  return result;
 };
 
 const getCharts = async () => {
+  const cached = await cache.get('dash:charts');
+  if (cached) return cached;
+
   // Last 6 months of services + revenue
   const months = [];
   for (let i = 5; i >= 0; i--) {
@@ -53,27 +63,45 @@ const getCharts = async () => {
   const byStatus = await prisma.service.groupBy({ by: ['status'], _count: { status: true } });
   const byPriority = await prisma.service.groupBy({ by: ['priority'], _count: { priority: true } });
 
-  return { monthly: monthlyData, byStatus, byPriority };
+  const result = { monthly: monthlyData, byStatus, byPriority };
+  await cache.set('dash:charts', result, 300);
+  return result;
 };
 
 const getAlerts = async () => {
+  const cached = await cache.get('dash:alerts');
+  if (cached) return cached;
+
   const [lowStock, criticalServices, overdueServices] = await Promise.all([
     prisma.$queryRaw`SELECT id, sku, name, quantity, minStock FROM inventory_items WHERE quantity <= minStock AND isActive = 1 LIMIT 10`,
     prisma.service.findMany({ where: { priority: 'CRITICAL', status: { notIn: ['DELIVERED', 'CANCELLED'] } }, include: { motorcycle: { include: { client: { select: { fullName: true } } } } }, take: 5 }),
     prisma.service.findMany({ where: { status: { in: ['PENDING', 'IN_PROGRESS', 'WAITING_PARTS'] }, createdAt: { lt: new Date(Date.now() - 72 * 60 * 60 * 1000) } }, include: { motorcycle: { include: { client: { select: { fullName: true } } } } }, take: 5 }),
   ]);
-  return { lowStock, criticalServices, overdueServices };
+  const result = { lowStock, criticalServices, overdueServices };
+  await cache.set('dash:alerts', result, 60);
+  return result;
 };
 
-const getRecentServices = async () => prisma.service.findMany({
-  where: { status: { notIn: ['DELIVERED', 'CANCELLED'] } },
-  include: { motorcycle: { include: { client: { select: { fullName: true } } } }, technician: { select: { name: true } } },
-  orderBy: { updatedAt: 'desc' }, take: 10,
-});
+const getRecentServices = async () => {
+  const cached = await cache.get('dash:recent');
+  if (cached) return cached;
+
+  const result = await prisma.service.findMany({
+    where: { status: { notIn: ['DELIVERED', 'CANCELLED'] } },
+    include: { motorcycle: { include: { client: { select: { fullName: true } } } }, technician: { select: { name: true } } },
+    orderBy: { updatedAt: 'desc' }, take: 10,
+  });
+
+  await cache.set('dash:recent', result, 300);
+  return result;
+};
 
 const getTopTechnicians = async () => {
+  const cached = await cache.get('dash:topTech');
+  if (cached) return cached;
+
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-  return prisma.service.groupBy({
+  const result = await prisma.service.groupBy({
     by: ['technicianId'],
     where: { technicianId: { not: null }, createdAt: { gte: monthStart } },
     _count: { technicianId: true },
@@ -81,6 +109,9 @@ const getTopTechnicians = async () => {
     orderBy: { _count: { technicianId: 'desc' } },
     take: 5,
   });
+
+  await cache.set('dash:topTech', result, 300);
+  return result;
 };
 
 module.exports = { getKpis, getCharts, getAlerts, getRecentServices, getTopTechnicians };
