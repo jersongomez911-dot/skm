@@ -4,8 +4,9 @@ const { connectDB } = require('./config/database');
 const logger = require('./utils/logger.utils');
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 
 // Ensure upload dirs exist
 const uploadDirs = ['uploads', 'uploads/photos', 'uploads/signatures', 'uploads/avatars'];
@@ -16,29 +17,43 @@ uploadDirs.forEach(dir => {
 
 async function start() {
   try {
+    // 1. Run Migrations (Inside the process to manage memory better)
+    if (process.env.NODE_ENV === 'production') {
+      logger.info('🚀 Running database migrations...');
+      try {
+        // We use the prisma binary from node_modules
+        const prismaPath = path.join(__dirname, '../node_modules/.bin/prisma');
+        execSync(`${prismaPath} migrate deploy`, { stdio: 'inherit' });
+        logger.info('✅ Migrations completed');
+      } catch (migrationError) {
+        logger.error('❌ Migration failed, but attempting to start anyway:', migrationError.message);
+      }
+    }
+
+    // 2. Connect to DB
     await connectDB();
+
+    // 3. Start Listening
     const server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info(` SKM Backend running on port ${PORT}`);
-      logger.info(` Environment: ${process.env.NODE_ENV}`);
-      logger.info(` URL: http://0.0.0.0:${PORT}`);
-      logger.info(` Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB RSS`);
+      logger.info(`🚀 SKM Server LIVE on port ${PORT}`);
+      logger.info(`📊 Memory Usage: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB RSS`);
     });
 
-    // Graceful shutdown handlers
+    // Graceful shutdown
     const shutdown = (signal) => {
-      logger.info(`${signal} received, shutting down gracefully...`);
+      logger.info(`${signal} received. Closing server...`);
       server.close(() => {
-        logger.info('Server closed');
+        logger.info('Process terminated');
         process.exit(0);
       });
-      // Force close after 10s
-      setTimeout(() => process.exit(1), 10000);
+      setTimeout(() => process.exit(1), 5000);
     };
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
+
   } catch (err) {
-    logger.error(' Failed to start server:', err);
+    logger.error('💥 Fatal error during startup:', err);
     process.exit(1);
   }
 }
@@ -47,8 +62,4 @@ start();
 
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled Rejection:', reason);
-});
-process.on('uncaughtException', (err) => {
-  logger.error('Uncaught Exception:', err);
-  process.exit(1);
 });

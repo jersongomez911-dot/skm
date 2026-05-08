@@ -27,6 +27,14 @@ const notificationsRoutes = require('./modules/notifications/notifications.route
 
 const app = express();
 
+// ─── Basic Request Logging ──────────────────────────────────────────────────
+app.use((req, res, next) => {
+  if (req.path !== '/health') {
+    logger.info(`[${req.method}] ${req.path} - ${req.ip}`);
+  }
+  next();
+});
+
 // ─── Security Middleware ────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },

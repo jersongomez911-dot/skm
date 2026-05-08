@@ -57,6 +57,5 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-# Run directly with node - no npm overhead, no extra process
-# This ensures proper signal handling and lower memory usage
-CMD ["sh", "-c", "cd /app/backend && npx prisma migrate deploy && cd /app && exec node backend/src/server.js"]
+# Run directly with node
+CMD ["node", "backend/src/server.js"]
