@@ -17,7 +17,7 @@ uploadDirs.forEach(dir => {
 async function start() {
   try {
     await connectDB();
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 SKM Backend running on port ${PORT}`);
       logger.info(`📚 Environment: ${process.env.NODE_ENV}`);
       logger.info(`🔗 URL: http://localhost:${PORT}`);

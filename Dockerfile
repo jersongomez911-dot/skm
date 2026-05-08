@@ -40,12 +40,8 @@ COPY --from=builder /app/backend ./backend
 # Copy built frontend from builder
 COPY --from=builder /app/frontend/dist ./frontend/dist
 
-# Expose the API port
-EXPOSE 5000
-
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=5000
 
 # Start the server
 WORKDIR /app/backend
