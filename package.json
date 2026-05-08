@@ -6,8 +6,9 @@
   "scripts": {
     "start": "npm run deploy:migrate && node backend/src/server.js",
     "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
-    "postinstall": "prisma generate --schema=backend/prisma/schema.prisma",
-    "deploy:migrate": "prisma migrate deploy --schema=backend/prisma/schema.prisma"
+    "postinstall": "npx prisma generate --schema=backend/prisma/schema.prisma",
+    "deploy:migrate": "npx prisma migrate deploy --schema=backend/prisma/schema.prisma",
+    "db:seed": "node backend/prisma/seed.js"
   },
   "keywords": [],
   "author": "",
