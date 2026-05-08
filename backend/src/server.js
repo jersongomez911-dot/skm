@@ -17,13 +17,13 @@ uploadDirs.forEach(dir => {
 async function start() {
   try {
     await connectDB();
-    app.listen(PORT, '0.0.0.0', () => {
-      logger.info(`🚀 SKM Backend running on port ${PORT}`);
-      logger.info(`📚 Environment: ${process.env.NODE_ENV}`);
-      logger.info(`🔗 URL: http://localhost:${PORT}`);
+    app.listen(PORT, () => {
+      logger.info(` SKM Backend running on port ${PORT}`);
+      logger.info(` Environment: ${process.env.NODE_ENV}`);
+      logger.info(` URL: http://localhost:${PORT}`);
     });
   } catch (err) {
-    logger.error('❌ Failed to start server:', err);
+    logger.error(' Failed to start server:', err);
     process.exit(1);
   }
 }
