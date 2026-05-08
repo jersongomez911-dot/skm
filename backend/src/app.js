@@ -30,18 +30,27 @@ const app = express();
 // ─── Security Middleware ────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'blob:'],
-    },
-  },
+  // Disable CSP in production - SPA served from same origin handles its own security
+  contentSecurityPolicy: false,
 }));
 
+// CORS: allow Railway domain + localhost for development
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null,
+  'http://localhost:5173',
+  'http://localhost:5174',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (health checks, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.some(allowed => origin.startsWith(allowed))) return callback(null, true);
+    // In production monolith, same-origin requests have no CORS issues
+    if (process.env.NODE_ENV === 'production') return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -90,13 +99,25 @@ app.get('/health', (req, res) => {
 // ─── Frontend Static Files (Production) ───────────────────────────────────
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../../frontend/dist');
-  app.use(express.static(distPath));
+  const indexPath = path.join(distPath, 'index.html');
+  const fs = require('fs');
   
-  // All other routes redirect to index.html for SPA support
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/')) return next();
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    
+    // All other routes redirect to index.html for SPA support
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) return next();
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          logger.error('Failed to serve index.html:', err.message);
+          next(err);
+        }
+      });
+    });
+  } else {
+    logger.warn('⚠️  Frontend dist directory not found at:', distPath);
+  }
 }
 
 // ─── Error Handling ─────────────────────────────────────────────────────────

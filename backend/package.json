@@ -35,11 +35,11 @@
     "qrcode": "^1.5.4",
     "uuid": "^10.0.0",
     "winston": "^3.13.0",
-    "xss": "^1.0.15"
+    "xss": "^1.0.15",
+    "prisma": "^5.22.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4",
-    "prisma": "^5.22.0"
+    "nodemon": "^3.1.4"
   },
   "engines": {
     "node": ">=18.0.0"
