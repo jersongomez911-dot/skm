@@ -42,6 +42,8 @@ COPY --from=builder /app/frontend/dist ./frontend/dist
 
 # Set environment variables
 ENV NODE_ENV=production
+ENV PORT=8080
+EXPOSE 8080
 
 # Start the server
 WORKDIR /app/backend
