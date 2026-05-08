@@ -14,7 +14,6 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
-    "bullmq": "^5.8.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -34,7 +33,6 @@
     "otplib": "^12.0.1",
     "pdfkit": "^0.15.0",
     "qrcode": "^1.5.4",
-    "sharp": "^0.33.4",
     "uuid": "^10.0.0",
     "winston": "^3.13.0",
     "xss": "^1.0.15"

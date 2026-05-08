@@ -1,50 +1,80 @@
-# Root Dockerfile for SKM Workshop System (Monolith)
+# Root Dockerfile for SKM Workshop System (Optimized for Railway)
 
 # -------------------------
-# 1. Build Stage
+# 1. Frontend Build Stage
 # -------------------------
-FROM node:18-alpine AS builder
+FROM node:18-alpine AS frontend-builder
 
-# OpenSSL is required by Prisma engines on Alpine
-RUN apk add --no-cache openssl
+WORKDIR /app/frontend
 
-WORKDIR /app
+# Copy only package files first (leverage Docker cache)
+COPY frontend/package*.json ./
 
-# Copy package configurations
-COPY package*.json ./
-COPY backend/package*.json ./backend/
-COPY frontend/package*.json ./frontend/
+# Install dependencies
+RUN npm ci --no-audit --no-fund
 
-# Install all dependencies
-RUN npm install --prefix backend
-RUN npm install --prefix frontend
+# Copy frontend source
+COPY frontend/ ./
 
-# Copy all source code
-COPY . .
-
-# Generate Prisma client and build React frontend
+# Build the React app
 RUN npm run build
 
 # -------------------------
-# 2. Production Stage
+# 2. Backend Build Stage
+# -------------------------
+FROM node:18-alpine AS backend-builder
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app/backend
+
+# Copy only package files first (leverage Docker cache)
+COPY backend/package*.json ./
+
+# Install ALL dependencies (need devDeps for prisma generate)
+RUN npm ci --no-audit --no-fund
+
+# Copy prisma schema and generate client
+COPY backend/prisma ./prisma/
+RUN npx prisma generate
+
+# Copy backend source code only
+COPY backend/src ./src/
+
+# Remove devDependencies to shrink node_modules
+RUN npm prune --production
+
+# -------------------------
+# 3. Production Stage (minimal)
 # -------------------------
 FROM node:18-alpine
 
-# OpenSSL is required by Prisma engines at runtime
 RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy backend from builder
-COPY --from=builder /app/backend ./backend
-# Copy built frontend from builder
-COPY --from=builder /app/frontend/dist ./frontend/dist
+# Copy only production node_modules from backend builder
+COPY --from=backend-builder /app/backend/node_modules ./backend/node_modules/
+
+# Copy prisma generated client
+COPY --from=backend-builder /app/backend/node_modules/.prisma ./backend/node_modules/.prisma/
+
+# Copy backend source and prisma schema
+COPY --from=backend-builder /app/backend/src ./backend/src/
+COPY --from=backend-builder /app/backend/prisma ./backend/prisma/
+COPY --from=backend-builder /app/backend/package*.json ./backend/
+
+# Copy built frontend
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist/
+
+# Copy root package.json for start script
+COPY package*.json ./
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=8080
+
 EXPOSE 8080
 
 # Start the server
-WORKDIR /app/backend
 CMD ["npm", "start"]
