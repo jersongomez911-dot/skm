@@ -87,6 +87,18 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
+// ─── Frontend Static Files (Production) ───────────────────────────────────
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.join(__dirname, '../../frontend/dist');
+  app.use(express.static(distPath));
+  
+  // All other routes redirect to index.html for SPA support
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
 // ─── Error Handling ─────────────────────────────────────────────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
