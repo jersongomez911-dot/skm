@@ -104,11 +104,11 @@ export const dashboardApi = {
 }
 
 export const reportsApi = {
-  services: (params) => api.get(`/reports/services?${qs(params)}`, { responseType: params.format === 'pdf' ? 'blob' : 'json' }),
-  revenue: (params) => api.get(`/reports/revenue?${qs(params)}`, { responseType: params.format === 'pdf' ? 'blob' : 'json' }),
-  inventory: (params) => api.get(`/reports/inventory?${qs(params)}`, { responseType: params.format === 'pdf' ? 'blob' : 'json' }),
+  services: (params) => api.get(`/reports/services?${qs(params)}`, { responseType: ['pdf', 'xlsx'].includes(params.format) ? 'blob' : 'json' }),
+  revenue: (params) => api.get(`/reports/revenue?${qs(params)}`, { responseType: ['pdf', 'xlsx'].includes(params.format) ? 'blob' : 'json' }),
+  inventory: (params) => api.get(`/reports/inventory?${qs(params)}`, { responseType: ['pdf', 'xlsx'].includes(params.format) ? 'blob' : 'json' }),
   technicians: (params) => api.get(`/reports/technicians?${qs(params)}`),
-  clients: (params) => api.get(`/reports/clients?${qs(params)}`, { responseType: params.format === 'pdf' ? 'blob' : 'json' }),
+  clients: (params) => api.get(`/reports/clients?${qs(params)}`, { responseType: ['pdf', 'xlsx'].includes(params.format) ? 'blob' : 'json' }),
 }
 
 export const auditApi = {
